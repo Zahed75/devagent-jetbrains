@@ -1,24 +1,30 @@
-# Compiled class file
+# IntelliJ / Gradle
+.idea/
+.gradle/
+build/
+*.iml
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local secrets and env
+.env
+.env.*
+*.pem
+*.key
+*.p12
+
+# Generated caches
+node_modules/
+.vite/
+.pytest_cache/
+__pycache__/
+venv/
+.venv/
 *.class
+*.pyc
 
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
+# JetBrains plugin output
 *.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*

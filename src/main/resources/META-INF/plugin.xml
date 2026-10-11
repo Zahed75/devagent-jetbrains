@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<idea-plugin>
+    <id>com.zahed75.devagent</id>
+    <name>DevAgent</name>
+    <version>0.1.0</version>
+    <vendor email="devagent@zahed75.dev" url="https://github.com/Zahed75/devagent-jetbrains">Zahed75</vendor>
+
+    <description><![CDATA[
+        DevAgent brings a project-aware AI coding workspace to JetBrains IDEs.
+        Built for Kimi Code first, with an extensible abstraction layer for Claude,
+        OpenAI-compatible providers, and future multi-agent coding workflows.
+    ]]></description>
+
+    <change-notes><![CDATA[
+        Initial foundation build for the DevAgent JetBrains plugin.
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+            id="DevAgent"
+            anchor="right"
+            secondary="false"
+            factoryClass="com.zahed75.devagent.DevAgentToolWindowFactory"
+            icon="AllIcons.General.GearPlain"/>
+
+        <applicationService serviceImplementation="com.zahed75.devagent.settings.DevAgentSettingsService"/>
+        <applicationConfigurable
+            id="DevAgentSettings"
+            displayName="DevAgent"
+            instance="com.zahed75.devagent.settings.DevAgentConfigurable"/>
+    </extensions>
+</idea-plugin>
