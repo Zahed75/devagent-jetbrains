@@ -1,58 +1,52 @@
 package com.zahed75.devagent.providers
 
 import com.zahed75.devagent.settings.DevAgentSettingsService
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.util.concurrent.TimeUnit
+import java.io.File
 
 class KimiCliProvider(private val settings: DevAgentSettingsService) : AIProvider {
     override val id: String = "kimi-cli"
     override val displayName: String = "Kimi Code (CLI)"
     override val providerType: ProviderType = ProviderType.KIMI_CLI
-    override val availableModels: List<ModelDescriptor> = listOf(
-        ModelDescriptor("kimi-code", "Kimi Code", supportsStreaming = false, capabilities = setOf("chat"))
-    )
+    override val availableModels: List<ModelDescriptor> = emptyList()
 
-    override fun isAvailable(): Boolean {
-        val executable = settings.state.kimiCliPath.ifBlank { "kimi" }
-        return runCatching {
-            val process = ProcessBuilder(executable, "--version").start()
-            process.waitFor(8, TimeUnit.SECONDS)
-        }.getOrDefault(false)
-    }
+    override fun isAvailable(): Boolean = findExecutable() != null
 
     override fun testConnection(): ProviderCheckResult {
-        val executable = settings.state.kimiCliPath.ifBlank { "kimi" }
-        return runCatching {
-            val process = ProcessBuilder(executable, "--help").start()
-            val output = process.inputStream.bufferedReader().use(BufferedReader::readText)
-            val exitCode = process.waitFor(8, TimeUnit.SECONDS).let { if (it) 0 else 1 }
-            if (exitCode == 0) {
-                ProviderCheckResult(true, "Kimi CLI is reachable: $executable\n${output.take(200)}")
-            } else {
-                ProviderCheckResult(false, "Kimi CLI process exited without a successful result.")
-            }
-        }.getOrElse {
-            ProviderCheckResult(false, "Kimi CLI is not configured or not installed. Set the path in DevAgent settings.")
+        val executable = findExecutable()
+        return if (executable == null) {
+            ProviderCheckResult(false, "Kimi CLI was not found. Set its executable path in DevAgent settings.")
+        } else {
+            ProviderCheckResult(
+                false,
+                "Found $executable, but this build has no verified Kimi request protocol. No process was started.",
+            )
         }
     }
 
     override fun send(request: AgentRequest): AgentResponse {
-        val isAvailable = isAvailable()
-        return if (!isAvailable) {
-            AgentResponse(
-                text = "Kimi CLI is not available. Set the executable path in DevAgent settings and validate it with the connection test.",
-                providerId = id,
-                modelId = "kimi-code",
-                success = false,
-            )
+        return AgentResponse(
+            text = "Kimi requests are not implemented. No prompt or project content was sent.",
+            providerId = id,
+            modelId = settings.state.model,
+            success = false,
+        )
+    }
+
+    private fun findExecutable(): File? {
+        val configuredPath = settings.state.kimiCliPath.trim()
+        val command = configuredPath.ifBlank { "kimi" }
+        val hasPath = command.contains(File.separator) || (File.separatorChar == '\\' && command.contains('/'))
+        val candidates = if (hasPath) {
+            listOf(File(command))
         } else {
-            AgentResponse(
-                text = "Kimi CLI adapter detected. The provider is configured, but actual request execution requires a verified CLI contract. Use the provider configuration screen to validate the installed binary and its supported commands.",
-                providerId = id,
-                modelId = "kimi-code",
-                success = true,
-            )
+            val pathEntries = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+            val commands = if (File.separatorChar == '\\' && !command.endsWith(".exe", ignoreCase = true)) {
+                listOf(command, "$command.exe")
+            } else {
+                listOf(command)
+            }
+            pathEntries.flatMap { directory -> commands.map { File(directory, it) } }
         }
+        return candidates.firstOrNull { it.isFile && (File.separatorChar == '\\' || it.canExecute()) }
     }
 }

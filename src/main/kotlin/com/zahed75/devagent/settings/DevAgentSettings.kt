@@ -5,15 +5,19 @@ import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
-import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.credentialStore.CredentialAttributes
+import com.intellij.ide.passwordSafe.PasswordSafe
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
 import java.awt.BorderLayout
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+
+private val apiKeyCredentials = CredentialAttributes("com.zahed75.devagent.apiKey")
 
 class DevAgentSettingsState {
     var provider: String = "kimi-cli"
@@ -36,6 +40,11 @@ class DevAgentSettingsService : PersistentStateComponent<DevAgentSettingsState> 
     override fun getState(): DevAgentSettingsState = state
 
     override fun loadState(state: DevAgentSettingsState) {
+        val legacyApiKey = state.apiKey
+        state.apiKey = ""
+        if (legacyApiKey.isNotBlank()) {
+            runCatching { PasswordSafe.instance.setPassword(apiKeyCredentials, legacyApiKey) }
+        }
         this.state = state
     }
 
@@ -48,8 +57,12 @@ class DevAgentConfigurable : SearchableConfigurable {
     private val modelField = JBTextField(settings.state().model)
     private val cliPathField = JBTextField(settings.state().kimiCliPath)
     private val baseUrlField = JBTextField(settings.state().baseUrl)
-    private val apiKeyField = JBTextField(settings.state().apiKey)
+    private val apiKeyField = JBPasswordField()
     private val exclusionField = JBTextField(settings.state().projectExclusions)
+
+    init {
+        reset()
+    }
 
     override fun getId(): String = "DevAgent.Settings"
 
@@ -71,19 +84,36 @@ class DevAgentConfigurable : SearchableConfigurable {
         return root
     }
 
-    override fun isModified(): Boolean = true
+    override fun isModified(): Boolean {
+        val state = settings.state()
+        val enteredKey = apiKeyField.password
+        val storedKey = PasswordSafe.instance.getPassword(apiKeyCredentials)?.toCharArray() ?: CharArray(0)
+        return try {
+            selectedProviderId() != state.provider ||
+            modelField.text != state.model ||
+            cliPathField.text != state.kimiCliPath ||
+            baseUrlField.text != state.baseUrl ||
+            exclusionField.text != state.projectExclusions ||
+            !enteredKey.contentEquals(storedKey)
+        } finally {
+            enteredKey.fill('\u0000')
+            storedKey.fill('\u0000')
+        }
+    }
 
     override fun apply() {
-        settings.state().provider = when (providerCombo.selectedItem as String) {
-            "Kimi CLI" -> "kimi-cli"
-            "OpenAI-compatible" -> "openai-compatible"
-            else -> "claude-api"
+        val state = settings.state()
+        state.provider = selectedProviderId()
+        state.model = modelField.text
+        state.kimiCliPath = cliPathField.text
+        state.baseUrl = baseUrlField.text
+        state.projectExclusions = exclusionField.text
+        val key = apiKeyField.password
+        try {
+            PasswordSafe.instance.setPassword(apiKeyCredentials, String(key).takeIf { it.isNotBlank() })
+        } finally {
+            key.fill('\u0000')
         }
-        settings.state().model = modelField.text
-        settings.state().kimiCliPath = cliPathField.text
-        settings.state().baseUrl = baseUrlField.text
-        settings.state().apiKey = apiKeyField.text
-        settings.state().projectExclusions = exclusionField.text
     }
 
     override fun reset() {
@@ -95,8 +125,14 @@ class DevAgentConfigurable : SearchableConfigurable {
         modelField.text = settings.state().model
         cliPathField.text = settings.state().kimiCliPath
         baseUrlField.text = settings.state().baseUrl
-        apiKeyField.text = settings.state().apiKey
+        apiKeyField.text = PasswordSafe.instance.getPassword(apiKeyCredentials).orEmpty()
         exclusionField.text = settings.state().projectExclusions
+    }
+
+    private fun selectedProviderId(): String = when (providerCombo.selectedItem as? String) {
+        "Kimi CLI" -> "kimi-cli"
+        "OpenAI-compatible" -> "openai-compatible"
+        else -> "claude-api"
     }
 
     private fun createLabeledRow(labelText: String, field: JComponent): JPanel {
