@@ -25,7 +25,6 @@
             factoryClass="com.zahed75.devagent.DevAgentToolWindowFactory"
             icon="AllIcons.General.GearPlain"/>
 
-        <applicationService serviceImplementation="com.zahed75.devagent.settings.DevAgentSettingsService"/>
         <applicationConfigurable
             id="DevAgentSettings"
             displayName="DevAgent"
