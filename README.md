@@ -18,7 +18,7 @@ This repository starts with the foundation milestone: a working JetBrains plugin
 
 ## Minimum supported IDE
 
-The project is targeted at IntelliJ Platform 2024.1 and above (`since-build` 241). It is designed to load into IntelliJ IDEA, PyCharm, or WebStorm with the compatible platform version installed.
+The plugin declares `since-build` 241 (2024.1) and `until-build` 263.* (up to 2026.3), configured in `patchPluginXml` in `build.gradle.kts`. Update `untilBuild` when newer IDE builds are verified. It is designed to load into IntelliJ IDEA, PyCharm, or WebStorm with the compatible platform version installed.
 
 ## Project structure
 
@@ -51,13 +51,13 @@ The project is targeted at IntelliJ Platform 2024.1 and above (`since-build` 241
 ### 1. Install prerequisites
 
 - JDK 17+
-- Gradle Wrapper or Gradle 8.x+
+- Gradle 8.10.x via the bundled wrapper (`./gradlew`); do not use Gradle 9+, which is incompatible with the `org.jetbrains.intellij` 1.x plugin
 - IntelliJ IDEA / PyCharm / WebStorm with the IntelliJ Platform SDK (for local plugin testing)
 
 ### 2. Build the plugin
 
 ```bash
-gradle buildPlugin
+./gradlew buildPlugin
 ```
 
 ### 3. Run in IDE sandbox
